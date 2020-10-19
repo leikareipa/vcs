@@ -921,17 +921,28 @@ std::string capture_api_video4linux_s::get_device_firmware_version(void) const
 int capture_api_video4linux_s::get_device_maximum_input_count(void) const
 {
     std::string video_device_prefix = "/dev/video";
-    
-    for (int i = 0; i < 64; i++) {
+    int total_devices = 0;
+
+    for (int i = 0; i < 64; i++) 
+    {
+        v4l2_capability card_caps; 
+
         int f = open((video_device_prefix + std::to_string(i)).c_str(), O_RDONLY);
         
-        if ((f == -1))
-            return i;
-        
+        if (f == -1)
+            continue;
+
+        if (ioctl(f, VIDIOC_QUERYCAP, &card_caps) >= 0 && // Get card caps
+            strcmp((const char*)card_caps.driver, "Vision") == 0 && // Verify that card is using "Vision" driver
+            strcmp((const char*)card_caps.card, "Vision Control") != 0) // Verify that card is not "Vision Control" device
+        {
+            total_devices++;
+        }
+
         close(f);
     }
     
-    return 0;
+    return total_devices;
 }
 
 video_signal_parameters_s capture_api_video4linux_s::get_video_signal_parameters(void) const
