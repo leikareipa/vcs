@@ -501,7 +501,7 @@ bool capture_api_video4linux_s::enqueue_capture_buffers(void)
 // The thread will be terminated externally when the program exits.
 static void capture_function(capture_api_video4linux_s *const thisPtr)
 {
-    while (!PROGRAM_EXIT_REQUESTED && !CAPTURE_THREAD_EXIT_REQUESTED)
+    while (!PROGRAM_EXIT_REQUESTED)
     {
         // See if aspects of the signal have changed.
         /// TODO: Are there signal events we could hook onto, rather than
@@ -528,7 +528,7 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
             }
             else
             {
-                push_capture_event(capture_event_e::unrecoverable_error);
+                push_capture_event(capture_event_e::invalid_signal);
 
                 break;
             }
@@ -569,7 +569,7 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
                     switch (errno)
                     {
                         case EAGAIN: continue;
-                        default: push_capture_event(capture_event_e::unrecoverable_error); break;
+                        default: push_capture_event(capture_event_e::invalid_signal); break;
                     }
                 }
 
@@ -598,7 +598,7 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
                 // Tell the capture device it can use its capture buffer again.
                 if (!capture_apicall(VIDIOC_QBUF, &buf))
                 {
-                    push_capture_event(capture_event_e::unrecoverable_error);
+                    push_capture_event(capture_event_e::invalid_signal);
                     break;
                 }
             }
@@ -607,12 +607,10 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
             {
                 std::lock_guard<std::mutex> lock(thisPtr->captureMutex);
 
-                push_capture_event(capture_event_e::unrecoverable_error);
+                push_capture_event(capture_event_e::invalid_signal);
             }
         }
     }
-
-    CAPTURE_THREAD_EXIT_REQUESTED = 0;
 
     return;
 }
@@ -875,17 +873,6 @@ bool capture_api_video4linux_s::initialize(void)
 
 bool capture_api_video4linux_s::release(void)
 {
-    INFO(("Triggering capture thread exit."));
-    CAPTURE_THREAD_EXIT_REQUESTED = 1;
-
-    INFO(("Waiting for capture thread exit."));
-    // I should probably use a condition_variable to get rid of this ugly sleep
-    while (CAPTURE_THREAD_EXIT_REQUESTED != 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    INFO(("Capture thread exited."));
-
     this->release_hardware();
     close(CAPTURE_HANDLE);
 
@@ -1171,7 +1158,7 @@ bool capture_api_video4linux_s::set_input_channel(const unsigned idx)
     }
 
     // Release and initialize new capture handle
-    if (!release()) 
+    if (!this->release()) 
     {
         NBENE(("Failed to release capture handle."));
 
@@ -1181,7 +1168,7 @@ bool capture_api_video4linux_s::set_input_channel(const unsigned idx)
     INFO(("Setting capture input channel to %u.", (idx)));
     INPUT_CHANNEL_IDX = idx;
 
-    if (!initialize()) 
+    if (!this->initialize()) 
     {
         NBENE(("Failed to initialize new capture handle."));
 
