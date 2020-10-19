@@ -60,7 +60,7 @@ static capture_pixel_format_e CAPTURE_PIXEL_FORMAT = capture_pixel_format_e::rgb
 // The latest frame we've received from the capture device.
 static captured_frame_s FRAME_BUFFER;
 
-// The signal used to hault the capture thread before the handle is released.
+// The signal used to halt the capture thread before the handle is released.
 // Set to !0 to exit the thread and set back to 0 when thread exits.
 static i32 CAPTURE_THREAD_EXIT_REQUESTED = 0;
 
