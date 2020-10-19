@@ -27,6 +27,7 @@
 #include <chrono>
 #include <poll.h>
 #include "capture/capture_api_video4linux.h"
+#include "common/propagate/app_events.h"
 
 #define INCLUDE_VISION
 #include <visionrgb/include/rgb133v4l2.h>
@@ -58,6 +59,10 @@ static capture_pixel_format_e CAPTURE_PIXEL_FORMAT = capture_pixel_format_e::rgb
 
 // The latest frame we've received from the capture device.
 static captured_frame_s FRAME_BUFFER;
+
+// The signal used to hault the capture thread before the handle is released.
+// Set to !0 to exit the thread and set back to 0 when thread exits.
+static i32 CAPTURE_THREAD_EXIT_REQUESTED = 0;
 
 // A back buffer area for the capture device to capture into.
 static struct capture_back_buffer_s
@@ -496,7 +501,7 @@ bool capture_api_video4linux_s::enqueue_capture_buffers(void)
 // The thread will be terminated externally when the program exits.
 static void capture_function(capture_api_video4linux_s *const thisPtr)
 {
-    while (!PROGRAM_EXIT_REQUESTED)
+    while (!PROGRAM_EXIT_REQUESTED && !CAPTURE_THREAD_EXIT_REQUESTED)
     {
         // See if aspects of the signal have changed.
         /// TODO: Are there signal events we could hook onto, rather than
@@ -607,6 +612,8 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
         }
     }
 
+    CAPTURE_THREAD_EXIT_REQUESTED = 0;
+
     return;
 }
 
@@ -704,8 +711,10 @@ resolution_s capture_api_video4linux_s::get_source_resolution(void) const
 bool capture_api_video4linux_s::initialize_hardware(void)
 {
     // Open the capture device.
-    /// TODO: Query for the correct video channel rather than hardcoding /dev/video0.
-    if ((CAPTURE_HANDLE = open("/dev/video0", O_RDWR)) < 0)
+    std::string video_device_prefix = "/dev/video";
+    video_device_prefix.append(std::to_string(INPUT_CHANNEL_IDX));
+
+    if ((CAPTURE_HANDLE = open(video_device_prefix.c_str(), O_RDWR)) < 0)
     {
         NBENE(("Failed to open the capture device."));
 
@@ -866,6 +875,17 @@ bool capture_api_video4linux_s::initialize(void)
 
 bool capture_api_video4linux_s::release(void)
 {
+    INFO(("Triggering capture thread exit."));
+    CAPTURE_THREAD_EXIT_REQUESTED = 1;
+
+    INFO(("Waiting for capture thread exit."));
+    // I should probably use a condition_variable to get rid of this ugly sleep
+    while (CAPTURE_THREAD_EXIT_REQUESTED != 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    INFO(("Capture thread exited."));
+
     this->release_hardware();
     close(CAPTURE_HANDLE);
 
@@ -913,8 +933,18 @@ std::string capture_api_video4linux_s::get_device_firmware_version(void) const
 
 int capture_api_video4linux_s::get_device_maximum_input_count(void) const
 {
-    // For now, we only support one input channel.
-    return 1;
+    std::string video_device_prefix = "/dev/video";
+    
+    for (int i = 0; i < 64; i++) {
+        int f = open((video_device_prefix + std::to_string(i)).c_str(), O_RDONLY);
+        
+        if ((f == -1))
+            return i;
+        
+        close(f);
+    }
+    
+    return 0;
 }
 
 video_signal_parameters_s capture_api_video4linux_s::get_video_signal_parameters(void) const
@@ -1127,6 +1157,43 @@ bool capture_api_video4linux_s::set_video_signal_parameters(const video_signal_p
     SIGNAL_CONTROLS.update();
 
     return true;
+}
+
+bool capture_api_video4linux_s::set_input_channel(const unsigned idx) 
+{
+    const int numInputChannels = this->get_device_maximum_input_count();
+
+    if (numInputChannels < 0)
+    {
+        NBENE(("Encountered an unexpected error while setting the input channel. Aborting the action."));
+
+        goto fail;
+    }
+
+    // Release and initialize new capture handle
+    if (!release()) 
+    {
+        NBENE(("Failed to release capture handle."));
+
+        goto fail;
+    }
+
+    INFO(("Setting capture input channel to %u.", (idx)));
+    INPUT_CHANNEL_IDX = idx;
+
+    if (!initialize()) 
+    {
+        NBENE(("Failed to initialize new capture handle."));
+
+        goto fail;
+    }
+
+    ke_events().capture.newInputChannel->fire();
+
+    return true;
+    
+    fail:
+    return false;
 }
 
 #endif

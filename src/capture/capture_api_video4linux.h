@@ -45,8 +45,9 @@ struct capture_api_video4linux_s : public capture_api_s
     bool reset_missed_frames_count(void) override;
     bool set_video_signal_parameters(const video_signal_parameters_s &p) override;
 
-    /// TODO: Properly implement these.
-    bool set_input_channel(const unsigned idx) override             { (void)idx; return false;   }
+    bool set_input_channel(const unsigned idx) override;
+
+    /// TODO: Properly implement this.
     bool set_pixel_format(const capture_pixel_format_e pf) override { (void)pf; return false;    }
 
     /// TODO: Does the Vision API allow you to query these?
