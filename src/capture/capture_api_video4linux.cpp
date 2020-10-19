@@ -394,6 +394,12 @@ static bool stream_on(void)
     return true;
 }
 
+// Returns true if the given v4l2 capabilities match a vision device
+static bool is_vision_caps(v4l2_capability* card_caps) {
+    return strcmp((const char*)card_caps->driver, "Vision") == 0 && // Verify that card is using "Vision" driver
+        strcmp((const char*)card_caps->card, "Vision Control") != 0; // Verify that card is not "Vision Control" device
+}
+
 bool capture_api_video4linux_s::unqueue_capture_buffers(void)
 {
     // Tell the capture device we want it to use capture buffers we've allocated.
@@ -708,15 +714,42 @@ resolution_s capture_api_video4linux_s::get_source_resolution(void) const
 
 bool capture_api_video4linux_s::initialize_hardware(void)
 {
-    // Open the capture device.
-    std::string video_device_prefix = "/dev/video";
-    video_device_prefix.append(std::to_string(INPUT_CHANNEL_IDX));
-
-    if ((CAPTURE_HANDLE = open(video_device_prefix.c_str(), O_RDWR)) < 0)
     {
-        NBENE(("Failed to open the capture device."));
+        // Open the Vision device at index INPUT_CHANNEL_IDX.
+        // Because Vision devices can have offset or spread indices,
+        // we need to reference cards by their index in a set of only Vision cards.
+        std::string video_device_prefix = "/dev/video";
+        int current_index = 0;
+        bool device_found = false;
 
-        goto fail;
+        for (int i = 0; i < 64; i++) 
+        {
+            v4l2_capability card_caps; 
+
+            int f = open((video_device_prefix + std::to_string(i)).c_str(), O_RDONLY);
+            
+            if (f < 0)
+                continue;
+
+            if (ioctl(f, VIDIOC_QUERYCAP, &card_caps) >= 0 && is_vision_caps(&card_caps)) 
+            {
+                if (current_index == INPUT_CHANNEL_IDX) {
+                    device_found = true;
+                    CAPTURE_HANDLE = f; 
+                    break;
+                }
+
+                current_index++;
+            }
+                
+            close(f);
+        }
+
+        if (!device_found) {
+            NBENE(("Unable to locate Vision device at channel index %u.", INPUT_CHANNEL_IDX));
+
+            goto fail;
+        }
     }
 
     // Verify device capabilities.
@@ -929,15 +962,11 @@ int capture_api_video4linux_s::get_device_maximum_input_count(void) const
 
         int f = open((video_device_prefix + std::to_string(i)).c_str(), O_RDONLY);
         
-        if (f == -1)
+        if (f < 0)
             continue;
 
-        if (ioctl(f, VIDIOC_QUERYCAP, &card_caps) >= 0 && // Get card caps
-            strcmp((const char*)card_caps.driver, "Vision") == 0 && // Verify that card is using "Vision" driver
-            strcmp((const char*)card_caps.card, "Vision Control") != 0) // Verify that card is not "Vision Control" device
-        {
+        if (ioctl(f, VIDIOC_QUERYCAP, &card_caps) >= 0 && is_vision_caps(&card_caps))
             total_devices++;
-        }
 
         close(f);
     }
