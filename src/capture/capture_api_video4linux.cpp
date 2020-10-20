@@ -389,6 +389,13 @@ static bool stream_on(void)
     return true;
 }
 
+// Returns true if the given v4l2 capabilities match a vision device
+static bool is_vision_caps(v4l2_capability* card_caps) 
+{
+    return strcmp((const char*)card_caps->driver, "Vision") == 0 && // Verify that card is using "Vision" driver
+        strcmp((const char*)card_caps->card, "Vision Control") != 0; // Verify that card is not "Vision Control" device
+}
+
 bool capture_api_video4linux_s::unqueue_capture_buffers(void)
 {
     // Tell the capture device we want it to use capture buffers we've allocated.
@@ -705,7 +712,7 @@ bool capture_api_video4linux_s::initialize_hardware(void)
 {
     // Open the capture device.
     /// TODO: Query for the correct video channel rather than hardcoding /dev/video0.
-    if ((CAPTURE_HANDLE = open((std::string("/dev/video") + std::to_string(INPUT_CHANNEL_IDX + 1)).c_str(), O_RDWR)) < 0)
+    if ((CAPTURE_HANDLE = open((std::string("/dev/video") + std::to_string(INPUT_CHANNEL_IDX)).c_str(), O_RDWR)) < 0)
     {
         NBENE(("Failed to open the capture device."));
 
@@ -911,10 +918,28 @@ std::string capture_api_video4linux_s::get_device_firmware_version(void) const
     return "Unknown";
 }
 
+
 int capture_api_video4linux_s::get_device_maximum_input_count(void) const
 {
-    // For now, we only support one input channel.
-    return 1;
+    std::string video_device_prefix = "/dev/video";
+    int total_devices = 0;
+
+    for (int i = 0; i < 64; i++) 
+    {
+        v4l2_capability card_caps; 
+
+        int f = open((video_device_prefix + std::to_string(i)).c_str(), O_RDONLY);
+        
+        if (f < 0)
+            continue;
+
+        if (ioctl(f, VIDIOC_QUERYCAP, &card_caps) >= 0 && is_vision_caps(&card_caps))
+            total_devices++;
+
+        close(f);
+    }
+    
+    return total_devices;
 }
 
 video_signal_parameters_s capture_api_video4linux_s::get_video_signal_parameters(void) const
