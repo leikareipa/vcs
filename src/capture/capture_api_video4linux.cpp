@@ -27,7 +27,6 @@
 #include <chrono>
 #include <poll.h>
 #include "capture/capture_api_video4linux.h"
-#include "common/propagate/app_events.h"
 
 #define INCLUDE_VISION
 #include <visionrgb/include/rgb133v4l2.h>
@@ -59,10 +58,6 @@ static capture_pixel_format_e CAPTURE_PIXEL_FORMAT = capture_pixel_format_e::rgb
 
 // The latest frame we've received from the capture device.
 static captured_frame_s FRAME_BUFFER;
-
-// The signal used to halt the capture thread before the handle is released.
-// Set to !0 to exit the thread and set back to 0 when thread exits.
-static i32 CAPTURE_THREAD_EXIT_REQUESTED = 0;
 
 // A back buffer area for the capture device to capture into.
 static struct capture_back_buffer_s
@@ -394,12 +389,6 @@ static bool stream_on(void)
     return true;
 }
 
-// Returns true if the given v4l2 capabilities match a vision device
-static bool is_vision_caps(v4l2_capability* card_caps) {
-    return strcmp((const char*)card_caps->driver, "Vision") == 0 && // Verify that card is using "Vision" driver
-        strcmp((const char*)card_caps->card, "Vision Control") != 0; // Verify that card is not "Vision Control" device
-}
-
 bool capture_api_video4linux_s::unqueue_capture_buffers(void)
 {
     // Tell the capture device we want it to use capture buffers we've allocated.
@@ -534,7 +523,7 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
             }
             else
             {
-                push_capture_event(capture_event_e::invalid_signal);
+                push_capture_event(capture_event_e::unrecoverable_error);
 
                 break;
             }
@@ -575,7 +564,7 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
                     switch (errno)
                     {
                         case EAGAIN: continue;
-                        default: push_capture_event(capture_event_e::invalid_signal); break;
+                        default: push_capture_event(capture_event_e::unrecoverable_error); break;
                     }
                 }
 
@@ -604,7 +593,7 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
                 // Tell the capture device it can use its capture buffer again.
                 if (!capture_apicall(VIDIOC_QBUF, &buf))
                 {
-                    push_capture_event(capture_event_e::invalid_signal);
+                    push_capture_event(capture_event_e::unrecoverable_error);
                     break;
                 }
             }
@@ -613,7 +602,7 @@ static void capture_function(capture_api_video4linux_s *const thisPtr)
             {
                 std::lock_guard<std::mutex> lock(thisPtr->captureMutex);
 
-                push_capture_event(capture_event_e::invalid_signal);
+                push_capture_event(capture_event_e::unrecoverable_error);
             }
         }
     }
@@ -714,42 +703,13 @@ resolution_s capture_api_video4linux_s::get_source_resolution(void) const
 
 bool capture_api_video4linux_s::initialize_hardware(void)
 {
+    // Open the capture device.
+    /// TODO: Query for the correct video channel rather than hardcoding /dev/video0.
+    if ((CAPTURE_HANDLE = open((std::string("/dev/video") + std::to_string(INPUT_CHANNEL_IDX + 1)).c_str(), O_RDWR)) < 0)
     {
-        // Open the Vision device at index INPUT_CHANNEL_IDX.
-        // Because Vision devices can have offset or spread indices,
-        // we need to reference cards by their index in a set of only Vision cards.
-        std::string video_device_prefix = "/dev/video";
-        int current_index = 0;
-        bool device_found = false;
+        NBENE(("Failed to open the capture device."));
 
-        for (int i = 0; i < 64; i++) 
-        {
-            v4l2_capability card_caps; 
-
-            int f = open((video_device_prefix + std::to_string(i)).c_str(), O_RDONLY);
-            
-            if (f < 0)
-                continue;
-
-            if (ioctl(f, VIDIOC_QUERYCAP, &card_caps) >= 0 && is_vision_caps(&card_caps)) 
-            {
-                if (current_index == INPUT_CHANNEL_IDX) {
-                    device_found = true;
-                    CAPTURE_HANDLE = f; 
-                    break;
-                }
-
-                current_index++;
-            }
-                
-            close(f);
-        }
-
-        if (!device_found) {
-            NBENE(("Unable to locate Vision device at channel index %u.", INPUT_CHANNEL_IDX));
-
-            goto fail;
-        }
+        goto fail;
     }
 
     // Verify device capabilities.
@@ -953,25 +913,8 @@ std::string capture_api_video4linux_s::get_device_firmware_version(void) const
 
 int capture_api_video4linux_s::get_device_maximum_input_count(void) const
 {
-    std::string video_device_prefix = "/dev/video";
-    int total_devices = 0;
-
-    for (int i = 0; i < 64; i++) 
-    {
-        v4l2_capability card_caps; 
-
-        int f = open((video_device_prefix + std::to_string(i)).c_str(), O_RDONLY);
-        
-        if (f < 0)
-            continue;
-
-        if (ioctl(f, VIDIOC_QUERYCAP, &card_caps) >= 0 && is_vision_caps(&card_caps))
-            total_devices++;
-
-        close(f);
-    }
-    
-    return total_devices;
+    // For now, we only support one input channel.
+    return 1;
 }
 
 video_signal_parameters_s capture_api_video4linux_s::get_video_signal_parameters(void) const
@@ -1184,43 +1127,6 @@ bool capture_api_video4linux_s::set_video_signal_parameters(const video_signal_p
     SIGNAL_CONTROLS.update();
 
     return true;
-}
-
-bool capture_api_video4linux_s::set_input_channel(const unsigned idx) 
-{
-    const int numInputChannels = this->get_device_maximum_input_count();
-
-    if (numInputChannels < 0)
-    {
-        NBENE(("Encountered an unexpected error while setting the input channel. Aborting the action."));
-
-        goto fail;
-    }
-
-    // Release and initialize new capture handle
-    if (!this->release()) 
-    {
-        NBENE(("Failed to release capture handle."));
-
-        goto fail;
-    }
-
-    INFO(("Setting capture input channel to %u.", (idx)));
-    INPUT_CHANNEL_IDX = idx;
-
-    if (!this->initialize()) 
-    {
-        NBENE(("Failed to initialize new capture handle."));
-
-        goto fail;
-    }
-
-    ke_events().capture.newInputChannel->fire();
-
-    return true;
-    
-    fail:
-    return false;
 }
 
 #endif
