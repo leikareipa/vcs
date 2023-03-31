@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <cstring>
+#include <thread>
 #include <linux/videodev2.h>
 #include "capture/vision_v4l/input_channel_v4l.h"
 #include "capture/vision_v4l/ic_v4l_video_parameters.h"

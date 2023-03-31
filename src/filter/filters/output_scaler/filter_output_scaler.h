@@ -8,6 +8,7 @@
 #ifndef VCS_FILTER_FILTERS_OUTPUT_SCALER_FILTER_OUTPUT_SCALER_H
 #define VCS_FILTER_FILTERS_OUTPUT_SCALER_FILTER_OUTPUT_SCALER_H
 
+#include <array>
 #include "filter/abstract_filter.h"
 #include "filter/filters/output_scaler/gui/filtergui_output_scaler.h"
 #include "display/display.h"
