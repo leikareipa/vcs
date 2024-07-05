@@ -1,6 +1,6 @@
 #
 # VCS
-# 2017-2023 Tarpeeksi Hyvae Soft
+# 2017-2024 Tarpeeksi Hyvae Soft
 #
 
 #..............................................................................
@@ -110,8 +110,6 @@ SOURCES += \
     src/filter/filters/output_scaler/gui/filtergui_output_scaler.cpp \
     src/filter/filters/render_text/filter_render_text.cpp \
     src/filter/filters/render_text/gui/filtergui_render_text.cpp \
-    src/filter/filters/source_fps_estimate/filter_source_fps_estimate.cpp \
-    src/filter/filters/source_fps_estimate/gui/filtergui_source_fps_estimate.cpp \
     src/main.cpp \
     src/display/display.cpp \
     src/display/qt/d_main.cpp \
@@ -119,24 +117,10 @@ SOURCES += \
     src/anti_tear/anti_tear_one_per_frame.cpp \
     src/anti_tear/anti_tearer.cpp \
     src/filter/abstract_filter.cpp \
-    src/filter/filters/denoise_pixel_gate/filter_denoise_pixel_gate.cpp \
-    src/filter/filters/denoise_pixel_gate/gui/filtergui_denoise_pixel_gate.cpp \
-    src/filter/filters/flip/filter_flip.cpp \
-    src/filter/filters/flip/gui/filtergui_flip.cpp \
     src/filter/filters/input_gate/filter_input_gate.cpp \
     src/filter/filters/input_gate/gui/filtergui_input_gate.cpp \
-    src/filter/filters/kernel_3x3/filter_kernel_3x3.cpp \
-    src/filter/filters/kernel_3x3/gui/filtergui_kernel_3x3.cpp \
-    src/filter/filters/median/filter_median.cpp \
-    src/filter/filters/median/gui/filtergui_median.cpp \
     src/filter/filters/output_gate/filter_output_gate.cpp \
     src/filter/filters/output_gate/gui/filtergui_output_gate.cpp \
-    src/filter/filters/rotate/filter_rotate.cpp \
-    src/filter/filters/rotate/gui/filtergui_rotate.cpp \
-    src/filter/filters/sharpen/filter_sharpen.cpp \
-    src/filter/filters/sharpen/gui/filtergui_sharpen.cpp \
-    src/filter/filters/unsharp_mask/filter_unsharp_mask.cpp \
-    src/filter/filters/unsharp_mask/gui/filtergui_unsharp_mask.cpp \
     src/scaler/scaler.cpp \
     src/common/log/log.cpp \
     src/filter/filter.cpp \
@@ -206,10 +190,8 @@ HEADERS += \
     src/filter/filters/crt/filter_crt.h \
     src/filter/filters/decimate/filter_decimate.h \
     src/filter/filters/denoise_pixel_gate/filter_denoise_pixel_gate.h \
-    src/filter/filters/denoise_pixel_gate/gui/filtergui_denoise_pixel_gate.h \
     src/filter/filters/filters.h \
     src/filter/filters/flip/filter_flip.h \
-    src/filter/filters/flip/gui/filtergui_flip.h \
     src/filter/filters/focus_peaking/filter_focus_peaking.h \
     src/filter/filters/line_copy/filter_line_copy.h \
     src/filter/filters/output_scaler/filter_output_scaler.h \
@@ -220,24 +202,18 @@ HEADERS += \
     src/filter/filters/render_text/font_5x3.h \
     src/filter/filters/render_text/font_fraps.h \
     src/filter/filters/source_fps_estimate/filter_source_fps_estimate.h \
-    src/filter/filters/source_fps_estimate/gui/filtergui_source_fps_estimate.h \
     src/filter/filters/input_gate/filter_input_gate.h \
     src/filter/filters/input_gate/gui/filtergui_input_gate.h \
     src/filter/filters/kernel_3x3/filter_kernel_3x3.h \
-    src/filter/filters/kernel_3x3/gui/filtergui_kernel_3x3.h \
     src/filter/filters/median/filter_median.h \
-    src/filter/filters/median/gui/filtergui_median.h \
     src/filter/filters/output_gate/filter_output_gate.h \
     src/filter/filters/output_gate/gui/filtergui_output_gate.h \
     src/filter/filters/rotate/filter_rotate.h \
-    src/filter/filters/rotate/gui/filtergui_rotate.h \
     src/filter/filters/sharpen/filter_sharpen.h \
-    src/filter/filters/sharpen/gui/filtergui_sharpen.h \
     src/filter/filters/render_text/filter_render_text.h \
     src/filter/filters/render_text/gui/filtergui_render_text.h \
     src/filter/filters/unknown/filter_unknown.h \
     src/filter/filters/unsharp_mask/filter_unsharp_mask.h \
-    src/filter/filters/unsharp_mask/gui/filtergui_unsharp_mask.h \
     src/main.h \
     src/scaler/scaler.h \
     src/capture/capture.h \
