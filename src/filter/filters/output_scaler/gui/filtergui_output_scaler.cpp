@@ -17,7 +17,7 @@ filtergui_output_scaler_c::filtergui_output_scaler_c(abstract_filter_c *const fi
     auto *scaledHeight = filtergui::spinner(filter, filter_output_scaler_c::PARAM_HEIGHT);
     scaledHeight->minValue = MIN_OUTPUT_HEIGHT;
     scaledHeight->maxValue = MAX_OUTPUT_HEIGHT;
-    this->fields.push_back({"Scale to", {scaledWidth, scaledHeight}});
+    this->fields.push_back({"Size", {scaledWidth, scaledHeight}});
 
     auto *scalerName = filtergui::combo_box(filter, filter_output_scaler_c::PARAM_SCALER);
     scalerName->items = ks_scaler_names();

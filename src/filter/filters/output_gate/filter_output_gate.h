@@ -35,7 +35,7 @@ public:
     CLONABLE_FILTER_TYPE(filter_output_gate_c)
 
     std::string uuid(void) const override { return "be8443e2-4355-40fd-aded-63cebcbfb8ce"; }
-    std::string name(void) const override { return "Output gate"; }
+    std::string name(void) const override { return "Output condition"; }
     filter_category_e category(void) const override { return filter_category_e::output_condition; }
     void apply(image_s *const image) override;
 
