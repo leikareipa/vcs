@@ -231,6 +231,9 @@ void InteractibleNodeGraph::update_scene_connections(void)
 
 bool InteractibleNodeGraph::get_user_permission_for_node_deletion(void) const
 {
+    // For now, let's not bother the user with queries.
+    return true;
+
     return (
         QMessageBox::Yes == QMessageBox::question(
             nullptr,
