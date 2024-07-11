@@ -19,11 +19,12 @@ public:
     enum {
         PARAM_THRESHOLD,
         PARAM_CORNER,
-        PARAM_TEXT_COLOR,
-        PARAM_BG_ALPHA,
+        _DEPRECATED_PARAM_TEXT_COLOR,
+        _DEPRECATED_PARAM_BG_ALPHA,
         PARAM_IS_SINGLE_ROW_ENABLED,
         PARAM_SINGLE_ROW_NUMBER,
         PARAM_SHOW_AVERAGE,
+        PARAM_VISUALIZE_RANGE,
     };
 
     enum {
@@ -33,32 +34,20 @@ public:
         BOTTOM_LEFT
     };
 
-    enum {
-        TEXT_GREEN,
-        TEXT_PURPLE,
-        TEXT_RED,
-        TEXT_YELLOW,
-        TEXT_WHITE
-    };
-
     filter_frame_rate_c(const filter_params_t &initialParamValues = {}) :
         abstract_filter_c({
             {PARAM_THRESHOLD, 20},
             {PARAM_CORNER, TOP_LEFT},
-            {PARAM_TEXT_COLOR, TEXT_YELLOW},
-            {PARAM_BG_ALPHA, 255},
+            {_DEPRECATED_PARAM_TEXT_COLOR, 0},
+            {_DEPRECATED_PARAM_BG_ALPHA, 0},
             {PARAM_IS_SINGLE_ROW_ENABLED, false},
             {PARAM_SINGLE_ROW_NUMBER, 0},
-            {PARAM_SHOW_AVERAGE, 0}
+            {PARAM_SHOW_AVERAGE, 0},
+            {PARAM_VISUALIZE_RANGE, 0}
         }, initialParamValues)
     {
         this->gui = new abstract_gui_s([filter = this](abstract_gui_s *const gui)
         {
-            auto *threshold = filtergui::spinner(filter, filter_frame_rate_c::PARAM_THRESHOLD);
-            threshold->minValue = 0;
-            threshold->maxValue = 255;
-            gui->fields.push_back({"Threshold", {threshold}});
-
             auto *singleRowNumber = filtergui::spinner(filter, filter_frame_rate_c::PARAM_SINGLE_ROW_NUMBER);
             singleRowNumber->isEnabled = filter->parameter(filter_frame_rate_c::PARAM_IS_SINGLE_ROW_ENABLED);
             singleRowNumber->minValue = 0;
@@ -68,20 +57,20 @@ public:
                 filter->set_parameter(filter_frame_rate_c::PARAM_IS_SINGLE_ROW_ENABLED, value);
                 singleRowNumber->set_enabled(value);
             };
-            gui->fields.push_back({"One row", {toggleRow, singleRowNumber}});
+            gui->fields.push_back({"Row", {toggleRow, singleRowNumber}});
+
+            auto *threshold = filtergui::spinner(filter, filter_frame_rate_c::PARAM_THRESHOLD);
+            threshold->minValue = 0;
+            threshold->maxValue = 255;
+            gui->fields.push_back({"Threshold", {threshold}});
 
             auto *corner = filtergui::combo_box(filter, filter_frame_rate_c::PARAM_CORNER);
             corner->items = {"Top left", "Top right", "Bottom right", "Bottom left"};
             gui->fields.push_back({"Position", {corner}});
 
-            auto *textColor = filtergui::combo_box(filter, filter_frame_rate_c::PARAM_TEXT_COLOR);
-            textColor->items = {"Green", "Purple", "Red", "Yellow", "White"};
-            gui->fields.push_back({"Fg. color", {textColor}});
-
-            auto *bgAlpha = filtergui::spinner(filter, filter_frame_rate_c::PARAM_BG_ALPHA);
-            bgAlpha->minValue = 0;
-            bgAlpha->maxValue = 255;
-            gui->fields.push_back({"Bg. alpha", {bgAlpha}});
+            auto *visualize = filtergui::combo_box(filter, filter_frame_rate_c::PARAM_VISUALIZE_RANGE);
+            visualize->items = {"None", "Range"};
+            gui->fields.push_back({"Visualize", {visualize}});
         });
     }
 
@@ -102,8 +91,6 @@ public:
 
         const unsigned threshold = this->parameter(PARAM_THRESHOLD);
         const unsigned cornerId = this->parameter(PARAM_CORNER);
-        const unsigned fgColorId = this->parameter(PARAM_TEXT_COLOR);
-        const uint8_t bgAlpha = this->parameter(PARAM_BG_ALPHA);
         const bool isSingleRow = this->parameter(PARAM_IS_SINGLE_ROW_ENABLED);
         const unsigned rowNumber = this->parameter(PARAM_SINGLE_ROW_NUMBER);
 
@@ -150,11 +137,73 @@ public:
             }
         }
 
+        // Visualize.
+        if (this->parameter(PARAM_VISUALIZE_RANGE))
+        {
+            const unsigned patternDensity = 9;
+
+            if (isSingleRow)
+            {
+                for (unsigned x = 0; x < image->resolution.w; x++)
+                {
+                    if (((x / patternDensity) % 2) == 0)
+                    {
+                        int idx = ((x + rowNumber * image->resolution.w) * 4);
+                        image->pixels[idx + 0] = ~image->pixels[idx + 0];
+                        image->pixels[idx + 1] = ~image->pixels[idx + 1];
+                        image->pixels[idx + 2] = ~image->pixels[idx + 2];
+                    }
+                }
+            }
+            else
+            {
+                const unsigned startRow = 0;
+                const unsigned endRow = (std::max(1u, resolution_s::from_capture_device_properties().h) - 1);
+
+                // Shade the area under the scan range.
+                for (unsigned y = startRow; y < endRow; y++)
+                {
+                    for (unsigned x = 0; x < image->resolution.w; x++)
+                    {
+                        const unsigned idx = ((x + y * image->resolution.w) * 4);
+
+                        image->pixels[idx + 1] *= 0.5;
+                        image->pixels[idx + 2] *= 0.5;
+
+                        // Create a dot pattern.
+                        if (((y % patternDensity) == 0) &&
+                            ((x + y) % (patternDensity * 2)) == 0)
+                        {
+                            image->pixels[idx + 0] = ~image->pixels[idx + 0];
+                            image->pixels[idx + 1] = ~image->pixels[idx + 1];
+                            image->pixels[idx + 2] = ~image->pixels[idx + 2];
+                        }
+                    }
+                }
+
+                // Indicate with a line where the scan range starts and ends.
+                for (unsigned x = 0; x < image->resolution.w; x++)
+                {
+                    if (((x / patternDensity) % 2) == 0)
+                    {
+                        int idx = ((x + startRow * image->resolution.w) * 4);
+                        image->pixels[idx + 0] = ~image->pixels[idx + 0];
+                        image->pixels[idx + 1] = ~image->pixels[idx + 1];
+                        image->pixels[idx + 2] = ~image->pixels[idx + 2];
+
+                        idx = ((x + endRow * image->resolution.w) * 4);
+                        image->pixels[idx + 0] = ~image->pixels[idx + 0];
+                        image->pixels[idx + 1] = ~image->pixels[idx + 1];
+                        image->pixels[idx + 2] = ~image->pixels[idx + 2];
+                    }
+                }
+            }
+        }
+
         // Draw the FPS counter into the image.
         {
             const unsigned signalRefreshRate = refresh_rate_s::from_capture_device_properties().value<unsigned>();
             const std::string outputString = std::to_string(std::min(estimatedFPS, signalRefreshRate));
-
             const std::pair<unsigned, unsigned> screenCoords = ([cornerId, &outputString, image]()->std::pair<unsigned, unsigned>
             {
                 const unsigned textWidth = (FONT_SIZE * FONT.width_of(outputString));
@@ -170,20 +219,7 @@ public:
                 }
             })();
 
-            const auto fgColor = ([fgColorId]()->std::vector<uint8_t>
-            {
-                switch (fgColorId)
-                {
-                    default:
-                    case TEXT_GREEN: return {0, 255, 0};
-                    case TEXT_PURPLE: return {255, 0, 255};
-                    case TEXT_RED: return {0, 0, 255};
-                    case TEXT_YELLOW: return {0, 255, 255};
-                    case TEXT_WHITE: return {255, 255, 255};
-                }
-            })();
-
-            FONT.render(outputString, image, screenCoords.first, screenCoords.second, FONT_SIZE, fgColor, {0, 0, 0, bgAlpha});
+            FONT.render(outputString, image, screenCoords.first, screenCoords.second, FONT_SIZE, {0, 255, 255}, {0, 0, 0, 255});
         }
 
         return;

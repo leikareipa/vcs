@@ -334,29 +334,25 @@ Given a sequence of input images, displays a FRAPS-like count of unique frames p
 
 ### Parameters
 
+- **Row**
+
+    If enabled, pixel differences will be compared along a single horizontal row rather than over the entire image. The value determines which row is used, such that 0 is the top-most row.
+
+    A single-row comparison is more accurate when the frame rate of the source doesn't match its output frequency, i.e. when there's screen tearing.
+
 - **Threshold**
 
     The minimum difference in pixel values between successive images to consider them as two unique images. Range: [0, 255].
 
     A value of 0 gives in the most accurate reading, but the presense in the images of e.g. analog noise will require a higher value.
 
-- **One row**
-
-    If enabled, pixel differences will be compared along a single horizontal row rather than over the entire image. The value determines which row is used, such that 0 is the top-most row.
-
-    A single-row comparison is more accurate when the frame rate of the source doesn't match its output frequency, i.e. when there's screen tearing.
-
 - **Position**
 
     Where in the image to display the FPS counter.
 
-- **Fg. color**
+- **Visualize**
 
-    The color of the FPS counter's text.
-
-- **Bg. alpha**
-
-    The background opacity of the FPS text. Range: [0, 255].
+    Show debug indicators to help you determine how the filter is operating.
 
 ## Temporal denoise
 
