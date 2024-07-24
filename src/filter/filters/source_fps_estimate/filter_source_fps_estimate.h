@@ -23,8 +23,9 @@ public:
         _DEPRECATED_PARAM_BG_ALPHA,
         PARAM_IS_SINGLE_ROW_ENABLED,
         PARAM_SINGLE_ROW_NUMBER,
-        PARAM_SHOW_AVERAGE,
+        PARAM_IS_AVERAGE_ENABLED,
         PARAM_VISUALIZE_RANGE,
+        PARAM_AVERAGE_WINDOW,
     };
 
     enum {
@@ -42,8 +43,9 @@ public:
             {_DEPRECATED_PARAM_BG_ALPHA, 0},
             {PARAM_IS_SINGLE_ROW_ENABLED, false},
             {PARAM_SINGLE_ROW_NUMBER, 0},
-            {PARAM_SHOW_AVERAGE, 0},
-            {PARAM_VISUALIZE_RANGE, 0}
+            {PARAM_IS_AVERAGE_ENABLED, false},
+            {PARAM_VISUALIZE_RANGE, 0},
+            {PARAM_AVERAGE_WINDOW, 9},
         }, initialParamValues)
     {
         this->gui = new abstract_gui_s([filter = this](abstract_gui_s *const gui)
@@ -58,6 +60,18 @@ public:
                 singleRowNumber->set_enabled(value);
             };
             gui->fields.push_back({"Row", {toggleRow, singleRowNumber}});
+
+            auto *averageOver = filtergui::spinner(filter, filter_frame_rate_c::PARAM_AVERAGE_WINDOW);
+            averageOver->suffix = " s";
+            averageOver->isEnabled = filter->parameter(filter_frame_rate_c::PARAM_AVERAGE_WINDOW);
+            averageOver->minValue = 1;
+            averageOver->maxValue = 99999;
+            auto *toggleAverage = filtergui::checkbox(filter, filter_frame_rate_c::PARAM_IS_AVERAGE_ENABLED);
+            toggleAverage->on_change = [=](const bool value){
+                filter->set_parameter(filter_frame_rate_c::PARAM_IS_AVERAGE_ENABLED, value);
+                averageOver->set_enabled(value);
+            };
+            gui->fields.push_back({"Average", {toggleAverage, averageOver}});
 
             auto *threshold = filtergui::spinner(filter, filter_frame_rate_c::PARAM_THRESHOLD);
             threshold->minValue = 0;
@@ -93,6 +107,8 @@ public:
         const unsigned cornerId = this->parameter(PARAM_CORNER);
         const bool isSingleRow = this->parameter(PARAM_IS_SINGLE_ROW_ENABLED);
         const unsigned rowNumber = this->parameter(PARAM_SINGLE_ROW_NUMBER);
+        const int isAverage = this->parameter(PARAM_IS_AVERAGE_ENABLED);
+        const int averageTimeout = this->parameter(PARAM_AVERAGE_WINDOW);
 
         // Find out whether any pixel in the current frame differs from the previous frame
         // by more than the threshold.
@@ -124,20 +140,7 @@ public:
             }
         }
 
-        // Update the FPS reading.
-        {
-            const auto timeNow = std::chrono::system_clock::now();
-            const double timeElapsed = (std::chrono::duration_cast<std::chrono::milliseconds>(timeNow - timeOfLastUpdate).count() / 500.0);
-
-            if (timeElapsed >= 1)
-            {
-                estimatedFPS = std::round(2 * (numUniqueFrames / timeElapsed));
-                numUniqueFrames = 0;
-                timeOfLastUpdate = timeNow;
-            }
-        }
-
-        // Visualize.
+        // Visualize parameters.
         if (this->parameter(PARAM_VISUALIZE_RANGE))
         {
             const unsigned patternDensity = 9;
@@ -200,7 +203,20 @@ public:
             }
         }
 
-        // Draw the FPS counter into the image.
+        // Update the FPS reading.
+        {
+            const auto timeNow = std::chrono::system_clock::now();
+            const double timeElapsed = (std::chrono::duration_cast<std::chrono::milliseconds>(timeNow - timeOfLastUpdate).count() / 500.0);
+
+            if (timeElapsed >= 1)
+            {
+                estimatedFPS = std::round(2 * (numUniqueFrames / timeElapsed));
+                numUniqueFrames = 0;
+                timeOfLastUpdate = timeNow;
+            }
+        }
+
+        // Display the FPS counter.
         {
             const unsigned signalRefreshRate = refresh_rate_s::from_capture_device_properties().value<unsigned>();
             const std::string outputString = std::to_string(std::min(estimatedFPS, signalRefreshRate));
@@ -219,13 +235,74 @@ public:
                 }
             })();
 
-            FONT.render(outputString, image, screenCoords.first, screenCoords.second, FONT_SIZE, {0, 255, 255}, {0, 0, 0, 255});
+            FONT.render(
+                outputString,
+                image,
+                screenCoords.first,
+                screenCoords.second,
+                FONT_SIZE,
+                {0, 255, 255},
+                {0, 0, 0, 255}
+            );
+        }
+
+        // Display the average FPS counter.
+        if (isAverage)
+        {
+            const unsigned signalRefreshRate = refresh_rate_s::from_capture_device_properties().value<unsigned>();
+            this->fpsCache.push_back(std::min(estimatedFPS, signalRefreshRate));
+
+            static unsigned curAverage = 0;
+            static auto prevTime = std::chrono::steady_clock::now();
+
+            auto curTime = std::chrono::steady_clock::now();
+            auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(curTime - prevTime);
+            const int timeLeft = (averageTimeout - elapsedTime.count());
+
+            if (timeLeft <= 0) {
+                const unsigned sum = std::accumulate(this->fpsCache.begin(), this->fpsCache.end(), 0);
+                curAverage = (double(sum) / this->fpsCache.size());
+                this->fpsCache.clear();
+                prevTime = curTime;
+            }
+
+            const std::string outputString = (
+                ((cornerId == TOP_LEFT) || (cornerId == BOTTOM_LEFT))
+                    ? (std::to_string(curAverage) + ":" + std::to_string(std::max(1, timeLeft)))
+                    : (std::to_string(std::max(1, timeLeft)) + ":" + std::to_string(curAverage))
+            );
+
+            const std::pair<unsigned, unsigned> screenCoords = ([cornerId, &outputString, image]()->std::pair<unsigned, unsigned>
+            {
+                const unsigned textWidth = (FONT_SIZE * FONT.width_of(outputString));
+                const unsigned textHeight = (FONT_SIZE * FONT.height_of(outputString));
+
+                switch (cornerId)
+                {
+                    default:
+                    case TOP_LEFT: return {0, textHeight};
+                    case TOP_RIGHT: return {(image->resolution.w - textWidth), textHeight};
+                    case BOTTOM_RIGHT: return {(image->resolution.w - textWidth), (image->resolution.h - textHeight * 2)};
+                    case BOTTOM_LEFT: return {0, (image->resolution.h - textHeight * 2)};
+                }
+            })();
+
+            FONT.render(
+                outputString,
+                image,
+                screenCoords.first,
+                screenCoords.second,
+                FONT_SIZE,
+                {0, 0, 192},
+                {0, 0, 0, 255}
+            );
         }
 
         return;
     }
 
 private:
+    std::vector<unsigned> fpsCache;
 };
 
 #endif
