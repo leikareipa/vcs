@@ -100,40 +100,8 @@ OutputWindow::OutputWindow(QWidget *parent) :
             });
         }
 
-        QAction *showBorder = new QAction("Border", this);
-        {
-            showBorder->setCheckable(true);
-            showBorder->setChecked(this->window_has_border());
-
-            connect(this, &OutputWindow::border_hidden, this, [showBorder]
-            {
-                showBorder->setChecked(false);
-            });
-
-            connect(this, &OutputWindow::border_shown, this, [showBorder]
-            {
-                showBorder->setChecked(true);
-            });
-
-            connect(this, &OutputWindow::fullscreen_mode_enabled, this, [showBorder]
-            {
-                showBorder->setEnabled(false);
-            });
-
-            connect(this, &OutputWindow::fullscreen_mode_disabled, this, [showBorder]
-            {
-                showBorder->setEnabled(true);
-            });
-
-            connect(showBorder, &QAction::triggered, this, [this]
-            {
-                this->toggle_window_border();
-            });
-        }
-
         QAction *fullscreen = new QAction("Fullscreen", this);
         {
-
             fullscreen->setCheckable(true);
             fullscreen->setChecked(this->isFullScreen());
 
@@ -187,7 +155,6 @@ OutputWindow::OutputWindow(QWidget *parent) :
         this->contextMenu->addSeparator();
         this->contextMenu->addAction(controlPanel);
         this->contextMenu->addSeparator();
-        this->contextMenu->addAction(showBorder);
         this->contextMenu->addAction(fullscreen);
         this->contextMenu->addSeparator();
         this->contextMenu->addAction(ecoMode);
@@ -517,11 +484,6 @@ void OutputWindow::closeEvent(QCloseEvent *event)
 
 void OutputWindow::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton)
-    {
-        toggle_window_border();
-    }
-
     return;
 }
 
