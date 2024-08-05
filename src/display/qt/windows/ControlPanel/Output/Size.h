@@ -23,6 +23,20 @@ namespace control_panel::output
 
         void set_output_size(const resolution_s &newSize);
 
+        void set_output_scale(const unsigned newScale);
+
+        resolution_s get_output_size(void);
+
+        unsigned get_output_scale(void);
+
+        void set_output_size_enabled(const bool is);
+
+        void set_output_scale_enabled(const bool is);
+
+        bool is_output_size_enabled(void);
+
+        bool is_output_scale_enabled(void);
+
     private:
         Ui::Size *ui;
     };

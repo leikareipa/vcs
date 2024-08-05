@@ -184,6 +184,50 @@ void control_panel::output::Size::set_output_size(const resolution_s &newSize)
     return;
 }
 
+void control_panel::output::Size::set_output_scale(const unsigned newScale)
+{
+    ui->spinBox_outputScale->setValue(newScale);
+
+    return;
+}
+
+void control_panel::output::Size::set_output_size_enabled(const bool is)
+{
+    ui->checkBox_forceOutputRes->setChecked(is);
+
+    return;
+}
+
+void control_panel::output::Size::set_output_scale_enabled(const bool is)
+{
+    ui->checkBox_forceOutputScale->setChecked(is);
+
+    return;
+}
+
+bool control_panel::output::Size::is_output_size_enabled(void)
+{
+    return ui->checkBox_forceOutputRes->isChecked();
+}
+
+bool control_panel::output::Size::is_output_scale_enabled(void)
+{
+    return ui->checkBox_forceOutputScale->isChecked();
+}
+
+unsigned control_panel::output::Size::get_output_scale(void)
+{
+    return ui->spinBox_outputScale->value();
+}
+
+resolution_s control_panel::output::Size::get_output_size(void)
+{
+    return {
+        .w = unsigned(ui->spinBox_outputResX->value()),
+        .h = unsigned(ui->spinBox_outputResY->value()),
+    };
+}
+
 // Adjusts the output scale value in the GUI by a pre-set step size in the given
 // direction. Note that this will automatically trigger a change in the actual
 // scaler output size as well.

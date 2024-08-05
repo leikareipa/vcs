@@ -57,6 +57,9 @@ static OGLWidget *OGL_SURFACE = nullptr;
 
 static bool IS_FULLSCREEN = false;
 static resolution_s PRE_FULLSCREEN_SIZE = {640, 480};
+static bool PRE_FULLSCREEN_SIZE_ENABLED = false;
+static unsigned PRE_FULLSCREEN_SCALE = 0;
+static bool PRE_FULLSCREEN_SCALE_ENABLED = false;
 static QPoint PRE_FULLSCREEN_POSITION;
 
 OutputWindow::OutputWindow(QWidget *parent) :
@@ -326,15 +329,29 @@ void OutputWindow::set_fullscreen(const bool is)
 
     if (is)
     {
-        PRE_FULLSCREEN_SIZE = ks_output_resolution();
+        PRE_FULLSCREEN_SIZE = this->control_panel()->output()->size()->get_output_size();
+        PRE_FULLSCREEN_SIZE_ENABLED = this->control_panel()->output()->size()->is_output_size_enabled();
+
+        PRE_FULLSCREEN_SCALE = this->control_panel()->output()->size()->get_output_scale();
+        PRE_FULLSCREEN_SCALE_ENABLED = this->control_panel()->output()->size()->is_output_scale_enabled();
+
         PRE_FULLSCREEN_POSITION = this->pos();
+
+        this->control_panel()->output()->size()->set_output_scale_enabled(false);
+        this->control_panel()->output()->size()->set_output_size_enabled(true);
         this->control_panel()->output()->size()->set_output_size(this->max_fullscreen_size());
         this->showFullScreen();
     }
     else
     {
         this->showNormal();
+
         this->control_panel()->output()->size()->set_output_size(PRE_FULLSCREEN_SIZE);
+        this->control_panel()->output()->size()->set_output_size_enabled(PRE_FULLSCREEN_SIZE_ENABLED);
+
+        this->control_panel()->output()->size()->set_output_scale(PRE_FULLSCREEN_SCALE);
+        this->control_panel()->output()->size()->set_output_scale_enabled(PRE_FULLSCREEN_SCALE_ENABLED);
+
         this->move(PRE_FULLSCREEN_POSITION);
     }
 
