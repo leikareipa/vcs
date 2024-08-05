@@ -147,9 +147,11 @@ Press the middle mouse button over the window to bring up a magnifying glass tha
 
 This feature isn't available when using the OpenGL renderer.
 
-### Borderless mode
+### Fullscreen mode
 
-Double-click the window to toggle borderless mode on/off.
+Double-click the window to enable fullscreen mode, or select *Fullscreen* from the [context menu](#context-menu). Double-click or press Esc to exit fullscreen mode.
+
+The aspect ratio of fullscreen mode can be customized via the [control panel](#control-panel).
 
 ### Resizing
 
@@ -164,6 +166,8 @@ Right-click the window to bring up a context menu that provides access to variou
 ![](./img/control-panel.webp)
 
 The control panel lets you adjust various operational aspects of VCS.
+
+To access the control panel, press ALT+Q or select *Control panel* from the output window's [context menu](#context-menu).
 
 # Image filters
 
@@ -420,7 +424,7 @@ Note that this filter only reduces the temporal aspect of the noise; it doesn't 
     </tr>
     <tr>
         <td><key-combo>Esc</key-combo></td>
-        <td>Exit full-screen mode.</td>
+        <td>Exit fullscreen mode.</td>
     </tr>
 </table>
 

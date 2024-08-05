@@ -17,12 +17,18 @@ control_panel::output::Window::Window(QWidget *parent) :
         OutputWindow::current_instance()->set_opengl_enabled(rendererName == "OpenGL");
     });
 
+    connect(ui->comboBox_fullscreenAspectRatio, &QComboBox::currentTextChanged, this, [parent](const QString &ratio)
+    {
+        kpers_set_value(INI_GROUP_OUTPUT_WINDOW, "FullscreenAspectRatio", ratio);
+    });
+
     connect(ui->lineEdit_title, &QLineEdit::textChanged, this, [parent](const QString &title)
     {
         kpers_set_value(INI_GROUP_OUTPUT_WINDOW, "Title", title);
         OutputWindow::current_instance()->override_window_title(title);
     });
 
+    ui->comboBox_fullscreenAspectRatio->setCurrentText(kpers_value_of(INI_GROUP_OUTPUT_WINDOW, "FullscreenAspectRatio", "Source ratio").toString());
     ui->comboBox_renderer->setCurrentText(kpers_value_of(INI_GROUP_OUTPUT_WINDOW, "Renderer", ui->comboBox_renderer->itemText(0)).toString());
     ui->lineEdit_title->setText(kpers_value_of(INI_GROUP_OUTPUT_WINDOW, "Title", ui->lineEdit_title->text()).toString());
 }
@@ -30,4 +36,9 @@ control_panel::output::Window::Window(QWidget *parent) :
 control_panel::output::Window::~Window()
 {
     delete ui;
+}
+
+std::string control_panel::output::Window::fullscreen_aspect_ratio()
+{
+    return ui->comboBox_fullscreenAspectRatio->currentText().toStdString();
 }

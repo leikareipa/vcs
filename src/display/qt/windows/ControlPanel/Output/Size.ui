@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>783</width>
-    <height>124</height>
+    <height>106</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -38,11 +38,8 @@
       <string>Resolution</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="checkBox_forceOutputRes">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="checkBox_forceOutputScale">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -50,7 +47,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Fixed</string>
+         <string>Relative</string>
         </property>
        </widget>
       </item>
@@ -99,8 +96,11 @@
         </item>
        </layout>
       </item>
-      <item row="1" column="0">
-       <widget class="QCheckBox" name="checkBox_forceOutputScale">
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="checkBox_forceOutputRes">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -108,7 +108,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Relative</string>
+         <string>Fixed</string>
         </property>
        </widget>
       </item>

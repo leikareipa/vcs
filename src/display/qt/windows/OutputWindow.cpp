@@ -32,6 +32,7 @@
 #include "display/qt/widgets/MagnifyingGlass.h"
 #include "display/qt/widgets/OGLWidget.h"
 #include "display/qt/widgets/DialogFragment.h"
+#include "display/qt/windows/ControlPanel/Output/Window.h"
 #include "display/qt/windows/ControlPanel/Output/Size.h"
 #include "display/qt/windows/ControlPanel/Capture/InputResolution.h"
 #include "display/qt/windows/ControlPanel.h"
@@ -53,6 +54,10 @@
 
 // For an optional OpenGL render surface.
 static OGLWidget *OGL_SURFACE = nullptr;
+
+static bool IS_FULLSCREEN = false;
+static resolution_s PRE_FULLSCREEN_SIZE = {640, 480};
+static QPoint PRE_FULLSCREEN_POSITION;
 
 OutputWindow::OutputWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -90,13 +95,13 @@ OutputWindow::OutputWindow(QWidget *parent) :
 
             connect(controlPanel, &QAction::triggered, this, [this]
             {
-                if (!this->controlPanelWindow->isVisible())
-                {
-                    this->controlPanelWindow->move(this->pos());
-                }
 
                 this->controlPanelWindow->show();
                 this->controlPanelWindow->activateWindow();
+                this->controlPanelWindow->move(
+                    (this->pos().x() + ((this->width() / 2) - (this->controlPanelWindow->width() / 2))),
+                    (this->pos().y() + ((this->height() / 2) - (this->controlPanelWindow->height() / 2)))
+                );
             });
         }
 
@@ -115,16 +120,9 @@ OutputWindow::OutputWindow(QWidget *parent) :
                 fullscreen->setChecked(false);
             });
 
-            connect(fullscreen, &QAction::triggered, this, [this]
+            connect(fullscreen, &QAction::triggered, this, [this](const bool checked)
             {
-                if (this->isFullScreen())
-                {
-                    this->showNormal();
-                }
-                else
-                {
-                    this->showFullScreen();
-                }
+                this->set_fullscreen(checked);
             });
         }
 
@@ -221,10 +219,7 @@ OutputWindow::OutputWindow(QWidget *parent) :
 
         connect(kd_make_key_shortcut("output-window: exit-fullscreen-mode", this), &QShortcut::activated, this, [this]
         {
-            if (this->isFullScreen())
-            {
-                this->showNormal();
-            }
+            this->set_fullscreen(false);
         });
     }
 
@@ -320,6 +315,50 @@ OutputWindow::OutputWindow(QWidget *parent) :
     return;
 }
 
+void OutputWindow::set_fullscreen(const bool is)
+{
+    if (IS_FULLSCREEN == is)
+    {
+        return;
+    }
+
+    IS_FULLSCREEN = is;
+
+    if (is)
+    {
+        PRE_FULLSCREEN_SIZE = ks_output_resolution();
+        PRE_FULLSCREEN_POSITION = this->pos();
+        this->control_panel()->output()->size()->set_output_size(this->max_fullscreen_size());
+        this->showFullScreen();
+    }
+    else
+    {
+        this->showNormal();
+        this->control_panel()->output()->size()->set_output_size(PRE_FULLSCREEN_SIZE);
+        this->move(PRE_FULLSCREEN_POSITION);
+    }
+
+    return;
+}
+
+bool OutputWindow::is_fullscreen(void)
+{
+    return IS_FULLSCREEN;
+}
+
+std::string OutputWindow::fullscreen_ratio(void)
+{
+    return this->control_panel()->output()->window()->fullscreen_aspect_ratio();
+}
+
+resolution_s OutputWindow::max_fullscreen_size(void)
+{
+    return {
+        .w = unsigned(qApp->primaryScreen()->geometry().width()),
+        .h = unsigned(qApp->primaryScreen()->geometry().height())
+    };
+}
+
 bool OutputWindow::apply_global_stylesheet(void)
 {
     QString styleSheet = "";
@@ -383,6 +422,8 @@ void OutputWindow::override_window_title(const QString &newTitle)
 
 OutputWindow::~OutputWindow()
 {
+    this->set_fullscreen(false);
+
     delete ui;
     ui = nullptr;
 
@@ -484,6 +525,11 @@ void OutputWindow::closeEvent(QCloseEvent *event)
 
 void OutputWindow::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    if (event->button() == Qt::LeftButton)
+    {
+        this->set_fullscreen(!IS_FULLSCREEN);
+    }
+
     return;
 }
 
@@ -549,16 +595,6 @@ void OutputWindow::mouseReleaseEvent(QMouseEvent *event)
     {
         LEFT_MOUSE_BUTTON_DOWN = false;
     }
-
-    return;
-}
-
-
-void OutputWindow::wheelEvent(QWheelEvent *event)
-{
-    // Adjust the size of the capture window with the mouse scroll wheel.
-    const int dir = (event->angleDelta().y() < 0)? 1 : -1;
-    this->control_panel()->output()->size()->adjust_output_scaling(dir);
 
     return;
 }
@@ -731,35 +767,6 @@ void OutputWindow::update_window_size(void)
     return;
 }
 
-bool OutputWindow::window_has_border(void)
-{
-    return !bool(windowFlags() & Qt::FramelessWindowHint);
-}
-
-void OutputWindow::toggle_window_border(void)
-{
-    if (this->isFullScreen())
-    {
-        return;
-    }
-
-    const Qt::WindowFlags borderlessFlags = (Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-
-    if (!window_has_border())
-    {
-        this->setWindowFlags(this->defaultWindowFlags & ~borderlessFlags);
-        emit this->border_shown();
-    }
-    else
-    {
-        this->setWindowFlags(Qt::FramelessWindowHint | borderlessFlags);
-        emit this->border_hidden();
-    }
-
-    this->show();
-    update_window_size();
-}
-
 void OutputWindow::save_screenshot(void)
 {
     const QString datestampedFilename = (
@@ -809,6 +816,18 @@ void OutputWindow::save_screenshot(void)
                 "The following location could not be written to:<br><br><b>%1</b>"
             ).arg(QDir::toNativeSeparators(QFileInfo(datestampedFilename).absolutePath()))
         );
+    }
+
+    return;
+}
+
+void OutputWindow::wheelEvent(QWheelEvent *event)
+{
+    if (!IS_FULLSCREEN)
+    {
+        // Adjust the size of the capture window with the mouse scroll wheel.
+        const int dir = (event->angleDelta().y() < 0)? 1 : -1;
+        this->control_panel()->output()->size()->adjust_output_scaling(dir);
     }
 
     return;

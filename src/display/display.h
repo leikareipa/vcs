@@ -151,5 +151,7 @@ void kd_show_headless_error_message(const char *const title, const char *const m
 void kd_show_headless_assert_error_message(const char *const msg, const char * const filename, const uint lineNum);
 
 bool kd_is_fullscreen(void);
+std::string kd_fullscreen_ratio(void);
+resolution_s kd_max_fullscreen_size(void);
 
 #endif

@@ -26,6 +26,7 @@ namespace control_panel
         ~Output();
 
         control_panel::output::Size* size(void) const { return this->sizeDialog; }
+        control_panel::output::Window* window(void) const { return this->windowDialog; }
         control_panel::output::Overlay* overlay(void) const { return this->overlayDialog; }
 
     private:

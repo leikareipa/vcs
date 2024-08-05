@@ -276,8 +276,60 @@ void ks_scale_frame(const captured_frame_s &frame)
         {
             k_assert(DEFAULT_SCALER, "A default scaler has not been defined.");
 
-            image_s dstImage = image_s(FRAME_BUFFER_PIXELS, outputRes);
-            DEFAULT_SCALER->apply(imageToBeScaled, &dstImage, {0, 0, 0, 0});
+            if (kd_is_fullscreen())
+            {
+                const std::string ratio = kd_fullscreen_ratio();
+
+                if (ratio == "Desktop size")
+                {
+                    image_s dstImage = image_s(FRAME_BUFFER_PIXELS, outputRes);
+                    DEFAULT_SCALER->apply(imageToBeScaled, &dstImage, {0, 0, 0, 0});
+                }
+                else
+                {
+                    double aspectX = 4;
+                    double aspectY = 3;
+
+                    if (ratio == "4:3")
+                    {
+                        aspectX = 4;
+                        aspectY = 3;
+                    }
+                    else if (ratio == "16:9")
+                    {
+                        aspectX = 16;
+                        aspectY = 9;
+                    }
+                    else
+                    {
+                        const int gcd = std::gcd(frame.resolution.w, frame.resolution.h);
+                        aspectX = (frame.resolution.w / gcd);
+                        aspectY = (frame.resolution.h / gcd);
+                    }
+
+                    resolution_s ratiodRes = {
+                        .w = unsigned(std::round(outputRes.h * (aspectX / aspectY))),
+                        .h = outputRes.h
+                    };
+
+                    if (ratiodRes.w > outputRes.w)
+                    {
+                        ratiodRes = {
+                            .w = outputRes.w,
+                            .h = unsigned(std::round(outputRes.w * (aspectY / aspectX)))
+                        };
+                    }
+
+                    const unsigned hPadding = ((outputRes.w - ratiodRes.w) / 2);
+                    image_s dstImage = image_s(FRAME_BUFFER_PIXELS, ratiodRes);
+                    DEFAULT_SCALER->apply(imageToBeScaled, &dstImage, {0, hPadding, 0, hPadding});
+                }
+            }
+            else
+            {
+                image_s dstImage = image_s(FRAME_BUFFER_PIXELS, outputRes);
+                DEFAULT_SCALER->apply(imageToBeScaled, &dstImage, {0, 0, 0, 0});
+            }
         }
     }
 

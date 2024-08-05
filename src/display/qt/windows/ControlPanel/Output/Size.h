@@ -3,6 +3,8 @@
 
 #include "display/qt/widgets/DialogFragment.h"
 
+struct resolution_s;
+
 namespace control_panel::output
 {
     namespace Ui { class Size; }
@@ -18,6 +20,8 @@ namespace control_panel::output
         void adjust_output_scaling(const int dir);
 
         void disable_output_size_controls(const bool areDisabled);
+
+        void set_output_size(const resolution_s &newSize);
 
     private:
         Ui::Size *ui;

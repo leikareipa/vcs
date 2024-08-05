@@ -15,6 +15,8 @@ namespace control_panel::output
         explicit Window(QWidget *parent = nullptr);
         ~Window();
 
+        std::string fullscreen_aspect_ratio(void);
+
     private:
         Ui::Window *ui;
     };

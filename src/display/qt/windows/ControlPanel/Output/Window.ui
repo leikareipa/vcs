@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>504</width>
-    <height>102</height>
+    <height>138</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -86,6 +86,37 @@
         <property name="placeholderText">
          <string>Custom title bar text</string>
         </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_fullscreenAspectRatio">
+        <property name="text">
+         <string>Fullscreen</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="comboBox_fullscreenAspectRatio">
+        <item>
+         <property name="text">
+          <string>4:3</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>16:9</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Source ratio</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Desktop size</string>
+         </property>
+        </item>
        </widget>
       </item>
      </layout>

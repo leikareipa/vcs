@@ -54,6 +54,10 @@ public:
 
     bool set_global_font_size(const unsigned fontSize);
 
+    bool is_fullscreen(void);
+    std::string fullscreen_ratio(void);
+    resolution_s max_fullscreen_size(void);
+
     void override_window_title(const QString &newTitle);
 
     ControlPanel* control_panel(void) const { return this->controlPanelWindow; }
@@ -73,7 +77,6 @@ public:
         k_assert(0, "No instance of the output window is available.");
         return nullptr;
     }
-
 signals:
     void fullscreen_mode_enabled(void);
     void fullscreen_mode_disabled(void);
@@ -94,9 +97,9 @@ private:
     // Load the font pointed to by the given filename, and make it available to the program.
     bool load_font(const QString &filename);
 
-    void toggle_window_border(void);
-
     void save_screenshot(void);
+
+    void set_fullscreen(const bool is);
 
     Ui::OutputWindow *ui = nullptr;
 

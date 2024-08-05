@@ -2,6 +2,7 @@
 #include "common/vcs_event/vcs_event.h"
 #include "capture/capture.h"
 #include "common/globals.h"
+#include "display/display.h"
 #include "scaler/scaler.h"
 #include "Size.h"
 #include "ui_Size.h"
@@ -171,6 +172,14 @@ control_panel::output::Size::Size(QWidget *parent) :
 control_panel::output::Size::~Size()
 {
     delete ui;
+
+    return;
+}
+
+void control_panel::output::Size::set_output_size(const resolution_s &newSize)
+{
+    ui->spinBox_outputResX->setValue(newSize.w);
+    ui->spinBox_outputResY->setValue(newSize.h);
 
     return;
 }

@@ -110,8 +110,24 @@ void kd_load_filter_graph(const std::string &filename)
 
 bool kd_is_fullscreen(void)
 {
+    if (!WINDOW)
+    {
+        return false;
+    }
+
+    return WINDOW->is_fullscreen();
+}
+
+std::string kd_fullscreen_ratio(void)
+{
     ASSERT_WINDOW_IS_NOT_NULL;
-    return WINDOW->isFullScreen();
+    return WINDOW->fullscreen_ratio();
+}
+
+resolution_s kd_max_fullscreen_size(void)
+{
+    ASSERT_WINDOW_IS_NOT_NULL;
+    return WINDOW->max_fullscreen_size();
 }
 
 void kd_show_headless_info_message(const char *const title, const char *const msg)
