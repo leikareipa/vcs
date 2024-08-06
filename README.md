@@ -36,9 +36,17 @@ The VCS codebase depends on the following libraries and frameworks:
 - Qt
 - OpenCV
 
-I recommend sticking with Qt 5 unless you enjoy fixing a variety of small breakages.
+Using this build environment should give you the least number of compatibility issues:
 
-Both OpenCV 4 and OpenCV 3 should be compatible, but no guarantees.
+| Distro       | Compiler | Qt   | OpenCV     |
+| ------------ | -------- | ---- | ---------- |
+| Ubuntu 20.04 | GCC 9    | 5.12 | 3.x, 4.x   |
+
+Versions of GCC newer than 9 [have been reported](https://github.com/leikareipa/vcs/issues/34) to fail to build VCS without minor modifications to the code.
+
+Major versions of Qt other than 5 will fail to compile and/or break many aspects of GUI functionality.
+
+VCS is currently developed against OpenCV 3.2, but OpenCV 4 appears to be equally compatible.
 
 ### Build configuration
 
